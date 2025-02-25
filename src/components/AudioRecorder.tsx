@@ -8,20 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 const MAX_RECORDING_TIME = 600; // 10 minutes in seconds
 const SEEK_TIME = 10; // 10 seconds for skip forward/backward
 
-interface AudioRecorderProps {
-    onSave: (data: {
-        id: string;
-        title: string;
-        description: string;
-        audio: Blob;
-        duration: string;
-    }) => void;
-}
-
 const formatTime = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60);
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
@@ -29,6 +19,7 @@ const AudioRecorder = () => {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -36,28 +27,89 @@ const AudioRecorder = () => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
 
+    const [playbackTime, setPlaybackTime] = useState(0);
+
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const recordingTimerRef = useRef<number | null>(null);
 
+    // Create audio element once on component mount
+    const handleMetadataLoaded = () => {
+        if (audioRef.current) {
+            setDuration(audioRef.current.duration);
+            console.log("Audio duration loaded:", audioRef.current.duration);
+        }
+    };
+
+// Make sure these are properly added in your useEffect
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => {
+            setPlaybackTime(audio.currentTime);
+            // Stop playback if reaches recording time
+            if (audio.currentTime >= recordingTime) {
+                audio.pause();
+                setIsPlaying(false);
+            }
+        };
+
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, [recordingTime]);
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => {
+            setPlaybackTime(audio.currentTime);
+            console.log("Time updated:", audio.currentTime); // For debugging
+        };
+
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, [audioBlob]);
+
+    // Update audio source when blob changes
+    useEffect(() => {
+        if (audioBlob && audioRef.current) {
+            if (audioUrl) {
+                URL.revokeObjectURL(audioUrl);
+            }
+
+            const url = URL.createObjectURL(audioBlob);
+            setAudioUrl(url);
+            audioRef.current.src = url;
+            audioRef.current.load(); // Force reload the audio element
+        }
+    }, [audioBlob]);
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorderRef.current = new MediaRecorder(stream);
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
             audioChunksRef.current = [];
 
-            mediaRecorderRef.current.ondataavailable = (event) => {
+            mediaRecorder.ondataavailable = (event) => {
                 audioChunksRef.current.push(event.data);
             };
 
-            mediaRecorderRef.current.onstop = () => {
+            mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
                 setAudioBlob(audioBlob);
                 setShowForm(true);
             };
 
-            mediaRecorderRef.current.start();
+            mediaRecorder.start();
             setIsRecording(true);
             setRecordingTime(0);
 
@@ -71,6 +123,7 @@ const AudioRecorder = () => {
                 });
             }, 1000);
         } catch (error) {
+            console.error("Recording error:", error);
             alert("Failed to start recording. Please check your microphone permissions.");
         }
     };
@@ -87,6 +140,12 @@ const AudioRecorder = () => {
     };
 
     const resetRecording = () => {
+        // Clean up the previous audio URL if it exists
+        if (audioUrl) {
+            URL.revokeObjectURL(audioUrl);
+            setAudioUrl(null);
+        }
+
         setAudioBlob(null);
         setShowForm(false);
         setTitle('');
@@ -94,8 +153,10 @@ const AudioRecorder = () => {
         setCurrentTime(0);
         setDuration(0);
         setIsPlaying(false);
+
         if (audioRef.current) {
             audioRef.current.src = '';
+            audioRef.current.load();
         }
     };
 
@@ -103,69 +164,57 @@ const AudioRecorder = () => {
         if (!audioBlob) return;
 
         const id = uuidv4();
-        onSave({
+        const audioData = {
             id,
             title: title.trim() || 'Recording 1',
             description: description.trim(),
             audio: audioBlob,
             duration: formatTime(Math.ceil(duration))
-        });
+        };
 
+        console.log("Saved Audio Data:", audioData);
         resetRecording();
     };
 
+    // Modified play/pause handler
     const handlePlayPause = () => {
-        if (audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.pause();
-            } else {
-                audioRef.current.play();
+        if (!audioRef.current) return;
+
+        if (isPlaying) {
+            audioRef.current.pause();
+            setIsPlaying(false);
+        } else {
+            // Reset to start if at end
+            if (playbackTime >= recordingTime) {
+                audioRef.current.currentTime = 0;
+                setPlaybackTime(0);
             }
-            setIsPlaying(!isPlaying);
+            audioRef.current.play()
+                .then(() => setIsPlaying(true))
+                .catch(err => {
+                    console.error("Play error:", err);
+                    setIsPlaying(false);
+                });
         }
     };
 
     const handleSeek = (seconds: number) => {
         if (audioRef.current) {
-            audioRef.current.currentTime = Math.max(0, Math.min(audioRef.current.currentTime + seconds, duration));
+            const newTime = Math.max(0, Math.min(
+                audioRef.current.currentTime + seconds,
+                recordingTime // Use recording time as maximum
+            ));
+            audioRef.current.currentTime = newTime;
+            setPlaybackTime(newTime);
         }
     };
-
-    useEffect(() => {
-        if (audioBlob) {
-            const url = URL.createObjectURL(audioBlob);
-            if (audioRef.current) {
-                audioRef.current.src = url;
-                audioRef.current.addEventListener('loadedmetadata', () => {
-                    setDuration(audioRef.current?.duration || 0);
-                });
-                audioRef.current.addEventListener('timeupdate', () => {
-                    setCurrentTime(audioRef.current?.currentTime || 0);
-                });
-                audioRef.current.addEventListener('ended', () => {
-                    setIsPlaying(false);
-                });
-            }
-            return () => URL.revokeObjectURL(url);
-        }
-    }, [audioBlob]);
-
-    useEffect(() => {
-        const audio = new Audio();
-        audioRef.current = audio;
-        return () => {
-            if (recordingTimerRef.current) {
-                clearInterval(recordingTimerRef.current);
-            }
-        };
-    }, []);
 
     if (showForm && audioBlob) {
         return (
             <div className="max-w-xl mx-auto space-y-6">
                 <div className="space-y-4">
                     <div className="text-center text-4xl font-mono">
-                        {formatTime(Math.floor(currentTime))}/{formatTime(Math.ceil(duration))}
+                        {formatTime(Math.floor(playbackTime))}/{formatTime(recordingTime)}
                     </div>
                     <div className="flex justify-center gap-4">
                         <Button
@@ -220,13 +269,16 @@ const AudioRecorder = () => {
                         Save
                     </Button>
                 </div>
+
+                {/* Audio element is still hidden but necessary for playback */}
+                <audio ref={audioRef} style={{ display: 'none' }} />
             </div>
         );
     }
 
     return (
         <div className="flex flex-col items-center gap-8">
-            <div className="text-4xl font-mono">
+            <div className="text-center text-4xl font-mono">
                 {formatTime(recordingTime)}
             </div>
             <div className="flex gap-4">
@@ -258,6 +310,7 @@ const AudioRecorder = () => {
                     </>
                 )}
             </div>
+            {/* Audio element is still hidden but necessary for recording */}
             <audio ref={audioRef} style={{ display: 'none' }} />
         </div>
     );
