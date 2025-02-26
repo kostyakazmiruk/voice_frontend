@@ -1,5 +1,6 @@
 // File: utils/api.ts
-import { AudioRecording } from '../types';
+
+import {AudioRecording} from "@/types";
 
 const API_URL = 'http://localhost:8000/api';
 
@@ -7,7 +8,7 @@ const API_URL = 'http://localhost:8000/api';
  * Fetch a recording's metadata by ID
  */
 export const fetchRecordingMetadata = async (id: string): Promise<any> => {
-    const response = await fetch(`${API_URL}/recordings/${id}`);
+    const response = await fetch(`http://localhost:8000/api/recordings/${id}`);
 
     if (!response.ok) {
         throw new Error(`Failed to fetch recording metadata: ${response.statusText}`);
@@ -20,7 +21,7 @@ export const fetchRecordingMetadata = async (id: string): Promise<any> => {
  * Fetch a recording's audio blob by ID
  */
 export const fetchRecordingAudio = async (id: string): Promise<Blob> => {
-    const response = await fetch(`${API_URL}/recordings/${id}/audio`);
+    const response = await fetch(`http://localhost:8000/api/recordings/${id}/audio`);
 
     if (!response.ok) {
         throw new Error(`Failed to fetch audio: ${response.statusText}`);
@@ -40,6 +41,7 @@ export const fetchCompleteRecording = async (id: string): Promise<AudioRecording
 
     // Create an audio URL from the blob
     const audioUrl = URL.createObjectURL(audioBlob);
+    console.log('metadata', metadata)
 
     return {
         id: metadata.id || id,
@@ -55,18 +57,15 @@ export const fetchCompleteRecording = async (id: string): Promise<AudioRecording
  * Update an existing recording
  */
 export const updateRecording = async (id: string, data: Partial<AudioRecording>): Promise<any> => {
-    const formData = new FormData();
-
-    if (data.title) formData.append('name', data.title);
-    if (data.description !== undefined) formData.append('description', data.description);
-    if (data.audioBlob) {
-        formData.append('audio', data.audioBlob, `${data.title || 'recording'}.webm`);
-        if (data.duration) formData.append('duration', Math.ceil(data.duration).toString());
-    }
-
     const response = await fetch(`${API_URL}/recordings/${id}`, {
-        method: 'POST', // Using POST as specified in your requirement
-        body: formData
+        method: 'POST', // Use PATCH or PUT instead of POST
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: data.title,
+            description: data.description
+        })
     });
 
     if (!response.ok) {
@@ -75,6 +74,7 @@ export const updateRecording = async (id: string, data: Partial<AudioRecording>)
 
     return await response.json();
 };
+
 
 /**
  * Save a new recording

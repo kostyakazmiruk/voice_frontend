@@ -106,7 +106,7 @@ const AudioRecorder = ({
                     setError(null);
 
                     const recording = await fetchCompleteRecording(recordingId);
-
+                    console.log('recording', recording)
                     // Set state with fetched data
                     setTitle(recording.title);
                     setDescription(recording.description);
@@ -121,7 +121,7 @@ const AudioRecorder = ({
                     }
                 } catch (error) {
                     console.error("Error loading recording:", error);
-                    setError("Failed to load recording. Please try again.");
+                    setError(`Failed to update recording with ${recordingId}. Please try again.`);
                 } finally {
                     setIsLoading(false);
                 }
@@ -288,28 +288,23 @@ const AudioRecorder = ({
             setIsLoading(true);
             setError(null);
 
-            const updates: Partial<AudioRecording> = {
+            const updates = {
                 title: title.trim() || 'Untitled Recording',
                 description: description.trim()
             };
 
-            // Include audio blob if we recorded new audio
-            if (audioBlob && recordingTime > 0) {
-                updates.audioBlob = audioBlob;
-                updates.duration = recordingTime;
-            }
-
-            await updateRecording(recordingId, updates);
+            const data = await updateRecording(recordingId, updates);
+            console.log('data', data)
 
             // Navigate back or call completion handler
             if (onComplete) {
-                onComplete();
+                await onComplete(recordingId, updates);
             } else {
                 router.push('/');
             }
         } catch (error) {
             console.error("Error updating recording:", error);
-            setError("Failed to update recording. Please try again.");
+            setError(`Failed to update recording with ${recordingId}. Please try again.`);
         } finally {
             setIsLoading(false);
         }
@@ -449,11 +444,16 @@ const AudioRecorder = ({
                     />
                 </div>
 
-                <div className="p-4 border rounded-md">
-                    <h2 className="text-xl font-bold mb-2">{title}</h2>
-                    <p className="mb-4">{description}</p>
-                    <CopyUrlButton url={getShareUrl()} />
-                </div>
+                <AudioForm
+                    title={title}
+                    description={description}
+                    onTitleChange={setTitle}
+                    onDescriptionChange={setDescription}
+                    onSave={handleUpdate}
+                    onCancel={handleCancel}
+                    disableInputs={true}
+                    saveLabel="Copy Link"
+                />
             </div>
         );
     }
