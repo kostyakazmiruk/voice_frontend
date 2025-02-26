@@ -49,6 +49,8 @@ const AudioRecorder = () => {
 
         const handleTimeUpdate = () => {
             setPlaybackTime(audio.currentTime);
+            setCurrentTime(audio.currentTime)
+
             // Stop playback if reaches recording time
             if (audio.currentTime >= recordingTime) {
                 audio.pause();
@@ -145,6 +147,7 @@ const AudioRecorder = () => {
             URL.revokeObjectURL(audioUrl);
             setAudioUrl(null);
         }
+        setRecordingTime(0)
 
         setAudioBlob(null);
         setShowForm(false);
@@ -160,20 +163,38 @@ const AudioRecorder = () => {
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!audioBlob) return;
 
         const id = uuidv4();
-        const audioData = {
-            id,
-            title: title.trim() || 'Recording 1',
-            description: description.trim(),
-            audio: audioBlob,
-            duration: formatTime(Math.ceil(duration))
-        };
+        const titleValue = title.trim() || 'Recording 1';
+        const descriptionValue = description.trim();
 
-        console.log("Saved Audio Data:", audioData);
-        resetRecording();
+        // Create FormData to send to the backend
+        const formData = new FormData();
+        formData.append('audio', audioBlob, `${titleValue}.webm`); // Append the audio blob
+        formData.append('name', titleValue);
+        formData.append('description', descriptionValue);
+        formData.append('duration', Math.ceil(duration).toString()); // Use the calculated duration
+        formData.append('publicId', id);
+
+        // Send the audio data to the backend
+        try {
+            const response = await fetch('http://localhost:8000/api/recordings', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save audio');
+            }
+
+            const result = await response.json();
+            console.log("Saved Audio Data:", result);
+            resetRecording();
+        } catch (error) {
+            console.error("Error saving audio:", error);
+        }
     };
 
     // Modified play/pause handler

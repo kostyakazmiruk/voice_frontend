@@ -6,12 +6,12 @@ import AudioRecorder from "@/components/AudioRecorder";
 
 export default function Home() {
   return (
-      <div>
+      <>
             <Header />
 
-            <main className="container mx-auto px-4 py-8">
+            <main className="min-h-[100vh] grid place-items-center ">
               <AudioRecorder />
             </main>
-      </div>
+      </>
   );
 }
