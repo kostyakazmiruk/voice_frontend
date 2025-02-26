@@ -5,31 +5,23 @@ import {router} from "next/client";
 
 interface Recording {
     id: string;
-    title: string;
+    name: string;
     description: string;
     duration: string;
 }
-
-// Mock API functions
+const host = "http://localhost:8000"
 const fetchRecordings = async (): Promise<Recording[]> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Return mock data
-    return [
-        {
-            id: uuidv4(),
-            title: "Recording 1",
-            description: "Description of the recording that might be very long and need truncation at some point to look good in the UI layout",
-            duration: "00:01:20"
-        }
-    ];
+    const response = await fetch(`http://localhost:8000/api/recordings`);
+    if (!response.ok) throw new Error('Failed to fetch');
+    return response.json();
 };
 
 const deleteRecording = async (id: string): Promise<void> => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Mock delete recording:', id);
+    console.log('id', id)
+    const response = await fetch(`http://localhost:8000/api/recordings/${id}`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Delete failed');
 };
 
 const Index = () => {
@@ -44,6 +36,7 @@ const Index = () => {
     };
 
     const handleDelete = async (id: string) => {
+        console.log('iddel', id)
         try {
             await deleteRecording(id);
             alert("Recording deleted. Please refresh to see changes.");
@@ -101,7 +94,7 @@ const Index = () => {
                             className="p-4 flex justify-between items-center"
                         >
                             <div className="flex-1 min-w-0">
-                                <h2 className="text-lg font-semibold">{recording.title}</h2>
+                                <h2 className="text-lg font-semibold">{recording.name}</h2>
                                 <p className="text-gray-600 truncate">{recording.description}</p>
                             </div>
 
