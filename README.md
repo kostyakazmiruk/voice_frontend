@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 
 https://www.loom.com/share/d50ab91c030a46729f931c6eb0966276?sid=e4a3cfe5-7f43-4a0d-80ef-4f37cd1fd0ec
-
+Backend https://github.com/kostyakazmiruk/voiceapp_backend
 
 ## Getting Started
 
