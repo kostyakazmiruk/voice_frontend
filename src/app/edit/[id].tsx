@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
-import AudioRecorder from '../../components/AudioRecorder';
 import { RecorderMode } from '../../types';
+import AudioRecorder from "@/components/audio/AudioRecorder";
 
 const EditPage = () => {
     const router = useRouter();

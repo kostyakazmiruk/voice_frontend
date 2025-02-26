@@ -1,7 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
+"use client"
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import {router} from "next/client";
+import Link from "next/link";
 
 interface Recording {
     id: string;
@@ -45,9 +46,7 @@ const Index = () => {
     };
 
     const handleCopyLink = (id: string) => {
-        const url = `${window.location.origin}/play/${id}`;
-        navigator.clipboard.writeText(url);
-        alert("Link copied to clipboard!");
+        router.push(`/edit/${id}`)
     };
 
     if (isLoading) {
@@ -102,18 +101,20 @@ const Index = () => {
                   {recording.duration}
                 </span>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => router.push(`/${recording.id}`)}
-                                        className="text-red-500 hover:text-red-600"
+                                    <Link
+                                        href={`/edit/${recording.id}`}
+
                                     >
                                         Edit
-                                    </button>
-                                    <button
+                                    </Link>
+                                    <Link
+                                        href={`/play/${recording.id}`}
+
                                         onClick={() => handleCopyLink(recording.id)}
                                         className="text-red-500 hover:text-red-600"
                                     >
                                         Copy URL
-                                    </button>
+                                    </Link>
                                     <button
                                         onClick={() => handleDelete(recording.id)}
                                         className="text-red-500 hover:text-red-600"
