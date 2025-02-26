@@ -1,17 +1,11 @@
 "use client"
-import Header from "@/components/Header/index";
-import Recordings from "../components/RecordingsList";
-import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import AudioRecorder from "@/components/AudioRecorder";
+import {RecorderMode} from "@/types";
 
 export default function Home() {
-  return (
-      <>
-            <Header />
-
-            <main className="min-h-[100vh] grid place-items-center ">
-              <AudioRecorder />
-            </main>
-      </>
-  );
+    return (
+        <div className="grid min-h-[90vh] place-items-center mx-auto py-8">
+            <AudioRecorder mode={RecorderMode.RECORD}/>
+        </div>
+    );
 }

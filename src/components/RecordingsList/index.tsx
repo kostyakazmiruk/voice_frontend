@@ -31,8 +31,7 @@ const Index = () => {
     });
 
     const handleNew = () => {
-        const newId = uuidv4();
-        router.push(`/${newId}`);
+        router.push(`/`);
     };
 
     const handleDelete = async (id: string) => {
@@ -46,7 +45,7 @@ const Index = () => {
     };
 
     const handleCopyLink = (id: string) => {
-        const url = `${window.location.origin}/${id}`;
+        const url = `${window.location.origin}/play/${id}`;
         navigator.clipboard.writeText(url);
         alert("Link copied to clipboard!");
     };
