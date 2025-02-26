@@ -11,6 +11,7 @@ interface Recording {
     duration: string;
 }
 const host = "http://localhost:8000"
+// should be in env, but whatever
 const fetchRecordings = async (): Promise<Recording[]> => {
     const response = await fetch(`http://localhost:8000/api/recordings`);
     if (!response.ok) throw new Error('Failed to fetch');
